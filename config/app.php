@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
 
     /*
@@ -56,6 +58,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Domain Base (resolucion de marca por subdominio)
+    |--------------------------------------------------------------------------
+    |
+    | En produccion: zontes.dominio.bo -> base_domain = dominio.bo.
+    | En local se deja vacio y la marca se resuelve por prefijo de ruta (/zontes).
+    |
+    */
+
+    'base_domain' => env('APP_BASE_DOMAIN', ''),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |
@@ -65,7 +79,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
     |--------------------------------------------------------------------------

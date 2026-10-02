@@ -1,66 +1,119 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Plataforma de Fidelización — Zontes / Kiden / NIU
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicación web para centralizar la fidelización de tres marcas de motos
+(**Zontes**, **Kiden**, **NIU**) en Bolivia. Los puntos son **independientes por
+marca**; la información de clientes, compras y mantenimientos llega por
+**archivos CSV**.
 
-## About Laravel
+El proyecto sigue `AGENTS.md` (fuente de verdad). Estado: **Fases 0 y 2
+completadas** (cimientos, multimarca, autenticación, motor de puntos e
+importación CSV; ver "Estado" más abajo).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Requisitos
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- PHP 8.2+ (extensiones habituales de Laravel).
+- Composer 2.
+- MariaDB 10.4 / MySQL 8 (o SQLite para pruebas).
+- Node 22+ (opcional; el prototipo usa Tailwind por CDN).
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Instalación (desarrollo)
 
-## Learning Laravel
+```bash
+composer install
+cp .env.example .env          # Windows: copy .env.example .env
+php artisan key:generate
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Edita `.env` y define, al menos:
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```
+DB_DATABASE=zontes
+DB_USERNAME=root
+DB_PASSWORD=
+CI_HASH_KEY=una-cadena-larga-y-secreta   # HMAC del ci_hash (no cambiar en caliente)
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Crea la base de datos y carga los datos de demostración:
 
-## Laravel Sponsors
+```bash
+php artisan migrate --seed
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Levanta el servidor:
 
-### Premium Partners
+```bash
+php artisan serve
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## Usuarios de demostración
 
-## Contributing
+| Rol | Email | Contraseña |
+|---|---|---|
+| Super admin | `admin@zontes.test` | `password` |
+| Admin de Zontes | `zontes.admin@zontes.test` | `password` |
+| Staff de sucursal | `staff@zontes.test` | `password` |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Los seeders cargan las marcas `zontes`, `kiden` y `niu`, reglas de puntos,
+clientes precargados y una sucursal. **Solo para desarrollo.**
 
-## Code of Conduct
+## Comandos útiles
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+# Motor de puntos
+php artisan points:expire                 # genera vencimientos de lotes caducados
+php artisan points:reconcile              # saldo de billetera = suma de lotes
 
-## Security Vulnerabilities
+# Importación CSV
+php artisan imports:process archivo.csv --type=purchases --brand=zontes
+#   --type: customers | purchases | maintenances
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# Calidad y pruebas
+vendor/bin/pest                           # suite Pest
+vendor/bin/pint                           # formateo (o --test para verificar)
+vendor/bin/phpstan analyse --no-progress  # Larastan nivel 6
+```
 
-## License
+El scheduler ejecuta `points:expire` a diario (`routes/console.php`).
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Resolución de marca
+
+La marca activa se resuelve por **subdominio** (`zontes.dominio.bo`) o por
+**prefijo de ruta** (`/zontes`, `/kiden`, `/niu`) para desarrollo local. La
+marca activa se expone vía `CurrentBrand` y se aplica a las consultas con el
+global scope `BrandScope`.
+
+## Estructura
+
+- `app/Domain/` — lógica de negocio (Brands, Customers, Loyalty, Referrals,
+  Imports) organizada por dominio; Actions de una sola responsabilidad.
+- `app/Http/` — controladores, middleware (`ResolveBrand`, `RequireRole`),
+  Form Requests.
+- `app/Livewire/Portal/` — componentes del portal cliente (saldo, historial,
+  puntos por vencer, referidos).
+- `config/loyalty.php` — CI, importaciones CSV, puntos, claim y referidos.
+
+## Documentación
+
+- [`docs/architecture.md`](docs/architecture.md)
+- [`docs/csv-formats.md`](docs/csv-formats.md)
+- [`docs/decisions/`](docs/decisions/)
+- [`AGENTS.md`](AGENTS.md)
+
+## Estado por fases
+
+- **Fase 0 — Cimientos:** proyecto Laravel, Pint, Larastan, Pest, CI, estructura
+  `app/Domain`, `docs/`.
+- **Fase 1 — Multimarca y autenticación:** migraciones `brands`, seeder de
+  marcas, `ResolveBrand`, `CurrentBrand`, `BrandScope`, temas, registro/login y
+  roles/policies (base).
+- **Fase 2 — Motor de puntos (prototipo entregable):** `users`/`brand_members`/
+  `customer_records`/`vehicles`/`branches`, importación CSV de clientes, compras
+  y mantenimientos con idempotencia y eventos pendientes, reglas y ledger de
+  puntos, `points:expire`, `points:reconcile`, portal cliente y panel admin.
+  **28 pruebas en verde.**
+- **Pendiente:** Fases 3–6 (referidos/catálogo/canjes, reportes, endurecimiento,
+  API). Ver `docs/decisions/0002-desviaciones-del-prototipo.md`.
+
+## Licencia
+
+MIT.
